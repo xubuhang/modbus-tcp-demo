@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ModbusTCP 读写测试</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .register-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">ModbusTCP 寄存器读写测试</h2>
+        <div id="registers"></div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function createRegisterItem(address) {
+            return `
+                <div class="register-item" id="register-${address}">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <h5>寄存器 ${address}</h5>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="value-${address}" placeholder="输入值">
+                                <button class="btn btn-primary" onclick="writeRegister(${address})">写入</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="read-${address}" readonly>
+                                <button class="btn btn-success" onclick="readRegister(${address})">读取</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initRegisters() {
+            const registersDiv = document.getElementById('registers');
+            for (let i = 0; i <= 9; i++) {
+                registersDiv.innerHTML += createRegisterItem(i);
+            }
+        }
+
+        function readRegister(address) {
+            fetch(`/api/modbus/read/${address}`)
+                .then(response => response.json())
+                .then(value => {
+                    document.getElementById(`read-${address}`).value = value;
+                })
+                .catch(error => {
+                    alert('读取失败：' + error);
+                });
+        }
+
+        function writeRegister(address) {
+            const value = document.getElementById(`value-${address}`).value;
+            if (!value) {
+                alert('请输入要写入的值');
+                return;
+            }
+
+            fetch(`/api/modbus/write/${address}?value=${value}`, {
+                method: 'POST'
+            })
+            .then(() => {
+                alert('写入成功');
+                readRegister(address);
+            })
+            .catch(error => {
+                alert('写入失败：' + error);
+            });
+        }
+
+        // 初始化页面
+        initRegisters();
+    </script>
+</body>
+</html> 
