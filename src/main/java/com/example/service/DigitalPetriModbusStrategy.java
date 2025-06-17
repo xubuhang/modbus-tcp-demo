@@ -6,19 +6,22 @@ import com.digitalpetri.modbus.requests.ReadHoldingRegistersRequest;
 import com.digitalpetri.modbus.requests.WriteSingleRegisterRequest;
 import com.digitalpetri.modbus.responses.ReadHoldingRegistersResponse;
 import io.netty.buffer.ByteBuf;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 @Service("digitalpetri")
 public class DigitalPetriModbusStrategy implements ModbusStrategy {
+    @Value("${modbus.timeout:3}")
+    private int timeout;
     @Override
     public int readRegister(String ip, int port, int slaveId, int address) throws Exception {
         ModbusTcpMaster master = null;
         try {
             ModbusTcpMasterConfig config = new ModbusTcpMasterConfig.Builder(ip)
                     .setPort(port)
-                    .setTimeout(Duration.ofSeconds(3))
+                    .setTimeout(Duration.ofSeconds(timeout))
                     .build();
             master = new ModbusTcpMaster(config);
 
@@ -44,7 +47,7 @@ public class DigitalPetriModbusStrategy implements ModbusStrategy {
         try {
             ModbusTcpMasterConfig config = new ModbusTcpMasterConfig.Builder(ip)
                     .setPort(port)
-                    .setTimeout(Duration.ofSeconds(3))
+                    .setTimeout(Duration.ofSeconds(timeout))
                     .build();
             master = new ModbusTcpMaster(config);
 

@@ -7,17 +7,21 @@ import net.wimpi.modbus.msg.ReadMultipleRegistersResponse;
 import net.wimpi.modbus.msg.WriteSingleRegisterRequest;
 import net.wimpi.modbus.net.TCPMasterConnection;
 import net.wimpi.modbus.procimg.SimpleRegister;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
 @Service("jamod")
 public class JamodModbusStrategy implements ModbusStrategy {
+    @Value("${modbus.timeout:3}")
+    private int timeout;
     @Override
     public int readRegister(String ip, int port, int slaveId, int address) throws Exception {
         InetAddress addr = InetAddress.getByName(ip);
         TCPMasterConnection con = new TCPMasterConnection(addr);
         con.setPort(port);
         con.connect();
+        con.setTimeout(timeout * 1000);
 
         ReadMultipleRegistersRequest req = new ReadMultipleRegistersRequest(address, 1);
         req.setUnitID(slaveId);

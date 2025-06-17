@@ -8,19 +8,22 @@ import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.exception.ModbusTransportException;
 import com.serotonin.modbus4j.ip.IpParameters;
 import com.serotonin.modbus4j.locator.BaseLocator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service("modbus4j")
 public class Modbus4jModbusStrategy implements ModbusStrategy {
+    @Value("${modbus.timeout:3}")
+    private int timeout;
     @Override
     public int readRegister(String ip, int port, int slaveId, int address) throws Exception {
         ModbusFactory modbusFactory = new ModbusFactory();
         IpParameters ipParameters = new IpParameters();
         ipParameters.setHost(ip);
         ipParameters.setPort(port);
-        
         ModbusMaster master = modbusFactory.createTcpMaster(ipParameters, true);
         try {
+            master.setTimeout(timeout*1000);
             master.init();
             BaseLocator<Number> locator = BaseLocator.holdingRegister(slaveId, address, DataType.TWO_BYTE_INT_UNSIGNED);
             return master.getValue(locator).intValue();
@@ -38,6 +41,7 @@ public class Modbus4jModbusStrategy implements ModbusStrategy {
         
         ModbusMaster master = modbusFactory.createTcpMaster(ipParameters, true);
         try {
+            master.setTimeout(timeout*1000);
             master.init();
             BaseLocator<Number> locator = BaseLocator.holdingRegister(slaveId, address, DataType.TWO_BYTE_INT_UNSIGNED);
             master.setValue(locator, value);
