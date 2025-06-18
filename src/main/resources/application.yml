@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+# Modbus配置
+modbus:
+  host: 127.0.0.1  # PLC IP地址
+  port: 502            # Modbus TCP端口
+  slave-id: 1          # 从站地址
+  timeout: 5           # 超时时间（秒）
+  dependency: digitalpetri  # 使用的Modbus库: digitalpetri, jlibmodbus, modbus4j, jamod
+  
+  # 连接管理配置
+  connection:
+    auto-detect: true           # 是否自动检测设备连接能力
+    force-short-connection: false  # 是否强制使用短连接
+    test-timeout: 30            # 连接能力测试超时时间（秒）
+    max-concurrent-test: 10     # 最大并发连接测试数
+
+# 日志配置
+logging:
+  level:
+    com.example: DEBUG
+    root: INFO
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n' 

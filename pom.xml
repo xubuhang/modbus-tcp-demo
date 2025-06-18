@@ -46,6 +46,13 @@
             <artifactId>modbus-master-tcp</artifactId>
             <version>1.2.2</version>
         </dependency>
+        
+        <!-- Netty依赖 - DigitalPetri Modbus需要 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.77.Final</version>
+        </dependency>
 
         
     </dependencies>

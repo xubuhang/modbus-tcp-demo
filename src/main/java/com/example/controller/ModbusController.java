@@ -12,6 +12,7 @@ public class ModbusController {
 
     @Autowired
     private ModbusStrategyFactory strategyFactory;
+
     @Value("${modbus.host}")
     private String ip;
     @Value("${modbus.port}")
