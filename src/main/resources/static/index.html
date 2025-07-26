@@ -480,7 +480,11 @@
 
             Object.keys(registerConditions.conditions).forEach(conditionId => {
                 const condition = registerConditions.conditions[conditionId];
-                if (!condition.triggerValue || !condition.writeAddress || !condition.writeValue) {
+                if (
+                    condition.triggerValue === null || condition.triggerValue === undefined ||
+                    condition.writeAddress === null || condition.writeAddress === undefined ||
+                    condition.writeValue === null || condition.writeValue === undefined
+                ) {
                     return;
                 }
 
