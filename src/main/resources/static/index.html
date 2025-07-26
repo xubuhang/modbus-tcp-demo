@@ -6,22 +6,70 @@
     <link href="./static/bootstrap.min.css" rel="stylesheet">
     <style>
         .register-item {
-            margin-bottom: 10px;
-            padding: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        .auto-read-control {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .condition-panel {
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid #b3d9ff;
+        }
+        .condition-panel.collapsed {
+            display: none;
+        }
+        .condition-active {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        .condition-active .condition-panel {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
         }
     </style>
 </head>
 <body>
     <div class="container mt-5">
         <h2 class="mb-4">ModbusTCP 寄存器读写测试</h2>
+        
+        <!-- 自动读取控制区域 -->
+        <div class="auto-read-control">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">自动读取控制</h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input" type="checkbox" id="autoReadSwitch">
+                        <label class="form-check-label" for="autoReadSwitch">
+                            <span id="autoReadStatus">关闭</span> (每秒读取一次)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div id="registers"></div>
     </div>
 
     <script src="./static/jquery.min.js"></script>
     <script src="./static/bootstrap.bundle.min.js"></script>
     <script>
+        let autoReadInterval = null;
+        let isAutoReading = false;
+        let conditions = {}; // 存储每个寄存器的条件设置
+
         function createRegisterItem(address) {
             return `
                 <div class="register-item" id="register-${address}">
@@ -29,16 +77,66 @@
                         <div class="col-md-2">
                             <h5>寄存器 ${address}</h5>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="input-group">
                                 <input type="number" class="form-control" id="value-${address}" placeholder="输入值">
                                 <button class="btn btn-primary" onclick="writeRegister(${address})">写入</button>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="input-group">
                                 <input type="text" class="form-control" id="read-${address}" readonly>
                                 <button class="btn btn-success" onclick="readRegister(${address})">读取</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="toggleCondition(${address})">
+                                    <span id="condition-toggle-${address}">设置条件</span>
+                                </button>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="condition-enabled-${address}" onchange="toggleConditionEnabled(${address})">
+                                    <label class="form-check-label" for="condition-enabled-${address}">启用</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 条件设置面板 -->
+                    <div class="condition-panel collapsed" id="condition-panel-${address}">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">触发条件</label>
+                                <select class="form-select" id="condition-operator-${address}">
+                                    <option value="equals">等于</option>
+                                    <option value="not_equals">不等于</option>
+                                    <option value="greater_than">大于</option>
+                                    <option value="less_than">小于</option>
+                                    <option value="greater_equal">大于等于</option>
+                                    <option value="less_equal">小于等于</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">触发值</label>
+                                <input type="number" class="form-control" id="condition-value-${address}" placeholder="触发值">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">写入地址</label>
+                                <input type="number" class="form-control" id="write-address-${address}" placeholder="目标地址">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">写入值</label>
+                                <input type="number" class="form-control" id="write-value-${address}" placeholder="写入值">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <small class="text-muted">
+                                    当寄存器 ${address} 的值 <span id="condition-desc-${address}">等于</span> 
+                                    <span id="condition-val-desc-${address}">-</span> 时，向地址 
+                                    <span id="write-addr-desc-${address}">-</span> 写入值 
+                                    <span id="write-val-desc-${address}">-</span>
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -50,6 +148,13 @@
             const registersDiv = document.getElementById('registers');
             for (let i = 0; i <= 9; i++) {
                 registersDiv.innerHTML += createRegisterItem(i);
+                conditions[i] = {
+                    enabled: false,
+                    operator: 'equals',
+                    triggerValue: null,
+                    writeAddress: null,
+                    writeValue: null
+                };
             }
         }
 
@@ -58,9 +163,11 @@
                 .then(response => response.json())
                 .then(value => {
                     document.getElementById(`read-${address}`).value = value;
+                    // 检查条件并执行自动写入
+                    checkAndExecuteCondition(address, value);
                 })
                 .catch(error => {
-                    alert('读取失败：' + error);
+                    console.error('读取失败：', error);
                 });
         }
 
@@ -83,8 +190,160 @@
             });
         }
 
+        function readAllRegisters() {
+            for (let i = 0; i <= 9; i++) {
+                readRegister(i);
+            }
+        }
+
+        function startAutoRead() {
+            if (autoReadInterval) {
+                clearInterval(autoReadInterval);
+            }
+            autoReadInterval = setInterval(readAllRegisters, 1000);
+            isAutoReading = true;
+            document.getElementById('autoReadStatus').textContent = '开启';
+            document.getElementById('autoReadSwitch').checked = true;
+        }
+
+        function stopAutoRead() {
+            if (autoReadInterval) {
+                clearInterval(autoReadInterval);
+                autoReadInterval = null;
+            }
+            isAutoReading = false;
+            document.getElementById('autoReadStatus').textContent = '关闭';
+            document.getElementById('autoReadSwitch').checked = false;
+        }
+
+        function toggleAutoRead() {
+            if (isAutoReading) {
+                stopAutoRead();
+            } else {
+                startAutoRead();
+            }
+        }
+
+        function toggleCondition(address) {
+            const panel = document.getElementById(`condition-panel-${address}`);
+            const toggleBtn = document.getElementById(`condition-toggle-${address}`);
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                toggleBtn.textContent = '隐藏条件';
+            } else {
+                panel.classList.add('collapsed');
+                toggleBtn.textContent = '设置条件';
+            }
+        }
+
+        function toggleConditionEnabled(address) {
+            const enabled = document.getElementById(`condition-enabled-${address}`).checked;
+            const registerItem = document.getElementById(`register-${address}`);
+            
+            conditions[address].enabled = enabled;
+            
+            if (enabled) {
+                registerItem.classList.add('condition-active');
+            } else {
+                registerItem.classList.remove('condition-active');
+            }
+        }
+
+        function updateConditionDescription(address) {
+            const operator = document.getElementById(`condition-operator-${address}`).value;
+            const triggerValue = document.getElementById(`condition-value-${address}`).value;
+            const writeAddress = document.getElementById(`write-address-${address}`).value;
+            const writeValue = document.getElementById(`write-value-${address}`).value;
+
+            const operatorText = {
+                'equals': '等于',
+                'not_equals': '不等于',
+                'greater_than': '大于',
+                'less_than': '小于',
+                'greater_equal': '大于等于',
+                'less_equal': '小于等于'
+            };
+
+            document.getElementById(`condition-desc-${address}`).textContent = operatorText[operator] || '等于';
+            document.getElementById(`condition-val-desc-${address}`).textContent = triggerValue || '-';
+            document.getElementById(`write-addr-desc-${address}`).textContent = writeAddress || '-';
+            document.getElementById(`write-val-desc-${address}`).textContent = writeValue || '-';
+
+            // 更新条件对象
+            conditions[address].operator = operator;
+            conditions[address].triggerValue = triggerValue ? parseInt(triggerValue) : null;
+            conditions[address].writeAddress = writeAddress ? parseInt(writeAddress) : null;
+            conditions[address].writeValue = writeValue ? parseInt(writeValue) : null;
+        }
+
+        function checkAndExecuteCondition(address, currentValue) {
+            const condition = conditions[address];
+            if (!condition.enabled || condition.triggerValue === null || 
+                condition.writeAddress === null || condition.writeValue === null) {
+                return;
+            }
+
+            let shouldExecute = false;
+            const triggerVal = condition.triggerValue;
+            const currentVal = parseInt(currentValue);
+
+            switch (condition.operator) {
+                case 'equals':
+                    shouldExecute = currentVal === triggerVal;
+                    break;
+                case 'not_equals':
+                    shouldExecute = currentVal !== triggerVal;
+                    break;
+                case 'greater_than':
+                    shouldExecute = currentVal > triggerVal;
+                    break;
+                case 'less_than':
+                    shouldExecute = currentVal < triggerVal;
+                    break;
+                case 'greater_equal':
+                    shouldExecute = currentVal >= triggerVal;
+                    break;
+                case 'less_equal':
+                    shouldExecute = currentVal <= triggerVal;
+                    break;
+            }
+
+            if (shouldExecute) {
+                console.log(`条件触发：寄存器${address}的值${currentVal}满足条件，向地址${condition.writeAddress}写入值${condition.writeValue}`);
+                executeConditionalWrite(condition.writeAddress, condition.writeValue);
+            }
+        }
+
+        function executeConditionalWrite(address, value) {
+            fetch(`/api/modbus/write/${address}?value=${value}`, {
+                method: 'POST'
+            })
+            .then(() => {
+                console.log(`条件写入成功：地址${address}，值${value}`);
+                // 更新目标地址的显示值
+                document.getElementById(`read-${address}`).value = value;
+            })
+            .catch(error => {
+                console.error(`条件写入失败：地址${address}，值${value}，错误：`, error);
+            });
+        }
+
         // 初始化页面
         initRegisters();
+
+        // 绑定开关事件
+        document.getElementById('autoReadSwitch').addEventListener('change', toggleAutoRead);
+
+        // 为所有条件输入框绑定更新事件
+        document.addEventListener('DOMContentLoaded', function() {
+            for (let i = 0; i <= 9; i++) {
+                document.getElementById(`condition-operator-${i}`).addEventListener('change', () => updateConditionDescription(i));
+                document.getElementById(`condition-value-${i}`).addEventListener('input', () => updateConditionDescription(i));
+                document.getElementById(`write-address-${i}`).addEventListener('input', () => updateConditionDescription(i));
+                document.getElementById(`write-value-${i}`).addEventListener('input', () => updateConditionDescription(i));
+            }
+        });
     </script>
 </body>
 </html> 
