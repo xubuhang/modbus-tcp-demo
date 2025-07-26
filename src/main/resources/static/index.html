@@ -37,6 +37,21 @@
             background-color: #fff3cd;
             border-color: #ffeaa7;
         }
+        .register-controls {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .delete-btn {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #dc3545;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -59,6 +74,20 @@
                 </div>
             </div>
         </div>
+
+        <!-- 寄存器管理控制区域 -->
+        <div class="register-controls">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">寄存器管理</h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-success" onclick="addRegisterRow()">
+                        <i class="bi bi-plus"></i> 添加寄存器
+                    </button>
+                </div>
+            </div>
+        </div>
         
         <div id="registers"></div>
     </div>
@@ -69,45 +98,55 @@
         let autoReadInterval = null;
         let isAutoReading = false;
         let conditions = {}; // 存储每个寄存器的条件设置
+        let registerCounter = 0; // 用于生成唯一ID
 
-        function createRegisterItem(address) {
+        function createRegisterItem(address = '') {
+            const id = registerCounter++;
             return `
-                <div class="register-item" id="register-${address}">
+                <div class="register-item" id="register-${id}" data-address="${address}">
                     <div class="row">
                         <div class="col-md-2">
-                            <h5>寄存器 ${address}</h5>
-                        </div>
-                        <div class="col-md-3">
                             <div class="input-group">
-                                <input type="number" class="form-control" id="value-${address}" placeholder="输入值">
-                                <button class="btn btn-primary" onclick="writeRegister(${address})">写入</button>
+                                <span class="input-group-text">地址</span>
+                                <input type="number" class="form-control" id="address-${id}" value="${address}" placeholder="寄存器地址" onchange="updateRegisterAddress(${id})">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="value-${id}" placeholder="输入值">
+                                <button class="btn btn-primary" onclick="writeRegister(${id})">写入</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="read-${id}" readonly>
+                                <button class="btn btn-success" onclick="readRegister(${id})">读取</button>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="read-${address}" readonly>
-                                <button class="btn btn-success" onclick="readRegister(${address})">读取</button>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
                             <div class="d-flex gap-2">
-                                <button class="btn btn-outline-info btn-sm" onclick="toggleCondition(${address})">
-                                    <span id="condition-toggle-${address}">设置条件</span>
+                                <button class="btn btn-outline-info btn-sm" onclick="toggleCondition(${id})">
+                                    <span id="condition-toggle-${id}">设置条件</span>
                                 </button>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="condition-enabled-${address}" onchange="toggleConditionEnabled(${address})">
-                                    <label class="form-check-label" for="condition-enabled-${address}">启用</label>
+                                    <input class="form-check-input" type="checkbox" id="condition-enabled-${id}" onchange="toggleConditionEnabled(${id})">
+                                    <label class="form-check-label" for="condition-enabled-${id}">启用</label>
                                 </div>
                             </div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-outline-danger btn-sm delete-btn" onclick="deleteRegisterRow(${id})">
+                                删除
+                            </button>
                         </div>
                     </div>
                     
                     <!-- 条件设置面板 -->
-                    <div class="condition-panel collapsed" id="condition-panel-${address}">
+                    <div class="condition-panel collapsed" id="condition-panel-${id}">
                         <div class="row">
                             <div class="col-md-3">
                                 <label class="form-label">触发条件</label>
-                                <select class="form-select" id="condition-operator-${address}">
+                                <select class="form-select" id="condition-operator-${id}">
                                     <option value="equals">等于</option>
                                     <option value="not_equals">不等于</option>
                                     <option value="greater_than">大于</option>
@@ -118,24 +157,24 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">触发值</label>
-                                <input type="number" class="form-control" id="condition-value-${address}" placeholder="触发值">
+                                <input type="number" class="form-control" id="condition-value-${id}" placeholder="触发值">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">写入地址</label>
-                                <input type="number" class="form-control" id="write-address-${address}" placeholder="目标地址">
+                                <input type="number" class="form-control" id="write-address-${id}" placeholder="目标地址">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">写入值</label>
-                                <input type="number" class="form-control" id="write-value-${address}" placeholder="写入值">
+                                <input type="number" class="form-control" id="write-value-${id}" placeholder="写入值">
                             </div>
                         </div>
                         <div class="row mt-2">
                             <div class="col-12">
                                 <small class="text-muted">
-                                    当寄存器 ${address} 的值 <span id="condition-desc-${address}">等于</span> 
-                                    <span id="condition-val-desc-${address}">-</span> 时，向地址 
-                                    <span id="write-addr-desc-${address}">-</span> 写入值 
-                                    <span id="write-val-desc-${address}">-</span>
+                                    当寄存器 <span id="condition-addr-desc-${id}">-</span> 的值 <span id="condition-desc-${id}">等于</span> 
+                                    <span id="condition-val-desc-${id}">-</span> 时，向地址 
+                                    <span id="write-addr-desc-${id}">-</span> 写入值 
+                                    <span id="write-val-desc-${id}">-</span>
                                 </small>
                             </div>
                         </div>
@@ -146,33 +185,88 @@
 
         function initRegisters() {
             const registersDiv = document.getElementById('registers');
-            for (let i = 0; i <= 9; i++) {
-                registersDiv.innerHTML += createRegisterItem(i);
-                conditions[i] = {
-                    enabled: false,
-                    operator: 'equals',
-                    triggerValue: null,
-                    writeAddress: null,
-                    writeValue: null
-                };
+            // 默认添加一行
+            registersDiv.innerHTML = createRegisterItem('0');
+            conditions[0] = {
+                enabled: false,
+                operator: 'equals',
+                triggerValue: null,
+                writeAddress: null,
+                writeValue: null
+            };
+            updateConditionDescription(0);
+        }
+
+        function addRegisterRow() {
+            const registersDiv = document.getElementById('registers');
+            const newRow = createRegisterItem('');
+            registersDiv.insertAdjacentHTML('beforeend', newRow);
+            
+            const newId = registerCounter - 1;
+            conditions[newId] = {
+                enabled: false,
+                operator: 'equals',
+                triggerValue: null,
+                writeAddress: null,
+                writeValue: null
+            };
+            
+            // 绑定事件监听器
+            bindConditionEvents(newId);
+            updateConditionDescription(newId);
+        }
+
+        function deleteRegisterRow(id) {
+            if (Object.keys(conditions).length <= 1) {
+                alert('至少需要保留一行寄存器！');
+                return;
+            }
+            
+            const registerElement = document.getElementById(`register-${id}`);
+            if (registerElement) {
+                registerElement.remove();
+                delete conditions[id];
             }
         }
 
-        function readRegister(address) {
+        function updateRegisterAddress(id) {
+            const address = document.getElementById(`address-${id}`).value;
+            const registerElement = document.getElementById(`register-${id}`);
+            registerElement.setAttribute('data-address', address);
+            updateConditionDescription(id);
+        }
+
+        function getRegisterAddress(id) {
+            return document.getElementById(`address-${id}`).value;
+        }
+
+        function readRegister(id) {
+            const address = getRegisterAddress(id);
+            if (!address) {
+                alert('请输入寄存器地址！');
+                return;
+            }
+
             fetch(`/api/modbus/read/${address}`)
                 .then(response => response.json())
                 .then(value => {
-                    document.getElementById(`read-${address}`).value = value;
+                    document.getElementById(`read-${id}`).value = value;
                     // 检查条件并执行自动写入
-                    checkAndExecuteCondition(address, value);
+                    checkAndExecuteCondition(id, value);
                 })
                 .catch(error => {
                     console.error('读取失败：', error);
                 });
         }
 
-        function writeRegister(address) {
-            const value = document.getElementById(`value-${address}`).value;
+        function writeRegister(id) {
+            const address = getRegisterAddress(id);
+            const value = document.getElementById(`value-${id}`).value;
+            
+            if (!address) {
+                alert('请输入寄存器地址！');
+                return;
+            }
             if (!value) {
                 alert('请输入要写入的值');
                 return;
@@ -183,7 +277,7 @@
             })
             .then(() => {
                 alert('写入成功');
-                readRegister(address);
+                readRegister(id);
             })
             .catch(error => {
                 alert('写入失败：' + error);
@@ -191,9 +285,12 @@
         }
 
         function readAllRegisters() {
-            for (let i = 0; i <= 9; i++) {
-                readRegister(i);
-            }
+            Object.keys(conditions).forEach(id => {
+                const address = getRegisterAddress(parseInt(id));
+                if (address) {
+                    readRegister(parseInt(id));
+                }
+            });
         }
 
         function startAutoRead() {
@@ -224,9 +321,9 @@
             }
         }
 
-        function toggleCondition(address) {
-            const panel = document.getElementById(`condition-panel-${address}`);
-            const toggleBtn = document.getElementById(`condition-toggle-${address}`);
+        function toggleCondition(id) {
+            const panel = document.getElementById(`condition-panel-${id}`);
+            const toggleBtn = document.getElementById(`condition-toggle-${id}`);
             
             if (panel.classList.contains('collapsed')) {
                 panel.classList.remove('collapsed');
@@ -237,11 +334,11 @@
             }
         }
 
-        function toggleConditionEnabled(address) {
-            const enabled = document.getElementById(`condition-enabled-${address}`).checked;
-            const registerItem = document.getElementById(`register-${address}`);
+        function toggleConditionEnabled(id) {
+            const enabled = document.getElementById(`condition-enabled-${id}`).checked;
+            const registerItem = document.getElementById(`register-${id}`);
             
-            conditions[address].enabled = enabled;
+            conditions[id].enabled = enabled;
             
             if (enabled) {
                 registerItem.classList.add('condition-active');
@@ -250,11 +347,12 @@
             }
         }
 
-        function updateConditionDescription(address) {
-            const operator = document.getElementById(`condition-operator-${address}`).value;
-            const triggerValue = document.getElementById(`condition-value-${address}`).value;
-            const writeAddress = document.getElementById(`write-address-${address}`).value;
-            const writeValue = document.getElementById(`write-value-${address}`).value;
+        function updateConditionDescription(id) {
+            const address = getRegisterAddress(id);
+            const operator = document.getElementById(`condition-operator-${id}`).value;
+            const triggerValue = document.getElementById(`condition-value-${id}`).value;
+            const writeAddress = document.getElementById(`write-address-${id}`).value;
+            const writeValue = document.getElementById(`write-value-${id}`).value;
 
             const operatorText = {
                 'equals': '等于',
@@ -265,20 +363,21 @@
                 'less_equal': '小于等于'
             };
 
-            document.getElementById(`condition-desc-${address}`).textContent = operatorText[operator] || '等于';
-            document.getElementById(`condition-val-desc-${address}`).textContent = triggerValue || '-';
-            document.getElementById(`write-addr-desc-${address}`).textContent = writeAddress || '-';
-            document.getElementById(`write-val-desc-${address}`).textContent = writeValue || '-';
+            document.getElementById(`condition-addr-desc-${id}`).textContent = address || '-';
+            document.getElementById(`condition-desc-${id}`).textContent = operatorText[operator] || '等于';
+            document.getElementById(`condition-val-desc-${id}`).textContent = triggerValue || '-';
+            document.getElementById(`write-addr-desc-${id}`).textContent = writeAddress || '-';
+            document.getElementById(`write-val-desc-${id}`).textContent = writeValue || '-';
 
             // 更新条件对象
-            conditions[address].operator = operator;
-            conditions[address].triggerValue = triggerValue ? parseInt(triggerValue) : null;
-            conditions[address].writeAddress = writeAddress ? parseInt(writeAddress) : null;
-            conditions[address].writeValue = writeValue ? parseInt(writeValue) : null;
+            conditions[id].operator = operator;
+            conditions[id].triggerValue = triggerValue ? parseInt(triggerValue) : null;
+            conditions[id].writeAddress = writeAddress ? parseInt(writeAddress) : null;
+            conditions[id].writeValue = writeValue ? parseInt(writeValue) : null;
         }
 
-        function checkAndExecuteCondition(address, currentValue) {
-            const condition = conditions[address];
+        function checkAndExecuteCondition(id, currentValue) {
+            const condition = conditions[id];
             if (!condition.enabled || condition.triggerValue === null || 
                 condition.writeAddress === null || condition.writeValue === null) {
                 return;
@@ -310,6 +409,7 @@
             }
 
             if (shouldExecute) {
+                const address = getRegisterAddress(id);
                 console.log(`条件触发：寄存器${address}的值${currentVal}满足条件，向地址${condition.writeAddress}写入值${condition.writeValue}`);
                 executeConditionalWrite(condition.writeAddress, condition.writeValue);
             }
@@ -321,12 +421,23 @@
             })
             .then(() => {
                 console.log(`条件写入成功：地址${address}，值${value}`);
-                // 更新目标地址的显示值
-                document.getElementById(`read-${address}`).value = value;
+                // 更新目标地址的显示值（如果存在对应的行）
+                Object.keys(conditions).forEach(id => {
+                    if (getRegisterAddress(parseInt(id)) == address) {
+                        document.getElementById(`read-${id}`).value = value;
+                    }
+                });
             })
             .catch(error => {
                 console.error(`条件写入失败：地址${address}，值${value}，错误：`, error);
             });
+        }
+
+        function bindConditionEvents(id) {
+            document.getElementById(`condition-operator-${id}`).addEventListener('change', () => updateConditionDescription(id));
+            document.getElementById(`condition-value-${id}`).addEventListener('input', () => updateConditionDescription(id));
+            document.getElementById(`write-address-${id}`).addEventListener('input', () => updateConditionDescription(id));
+            document.getElementById(`write-value-${id}`).addEventListener('input', () => updateConditionDescription(id));
         }
 
         // 初始化页面
@@ -335,15 +446,8 @@
         // 绑定开关事件
         document.getElementById('autoReadSwitch').addEventListener('change', toggleAutoRead);
 
-        // 为所有条件输入框绑定更新事件
-        document.addEventListener('DOMContentLoaded', function() {
-            for (let i = 0; i <= 9; i++) {
-                document.getElementById(`condition-operator-${i}`).addEventListener('change', () => updateConditionDescription(i));
-                document.getElementById(`condition-value-${i}`).addEventListener('input', () => updateConditionDescription(i));
-                document.getElementById(`write-address-${i}`).addEventListener('input', () => updateConditionDescription(i));
-                document.getElementById(`write-value-${i}`).addEventListener('input', () => updateConditionDescription(i));
-            }
-        });
+        // 为初始行绑定条件事件
+        bindConditionEvents(0);
     </script>
 </body>
 </html> 
