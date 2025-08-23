@@ -16,6 +16,26 @@ modbus:
     test-timeout: 30            # 连接能力测试超时时间（秒）
     max-concurrent-test: 10     # 最大并发连接测试数
 
+# 数据库配置
+spring:
+  datasource:
+    url: jdbc:h2:file:./modbus_config_db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
 # 日志配置
 logging:
   level:

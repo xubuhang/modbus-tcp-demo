@@ -87,12 +87,31 @@
         .add-condition-btn:hover {
             background-color: #218838;
         }
+        .modbus-config-select {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #90caf9;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2 class="mb-4">ModbusTCP 寄存器读写测试</h2>
+    <div class="container mt-6">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2 class="mb-0">ModbusTCP 寄存器读写测试</h2>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="./modbus-config.html" class="btn btn-outline-primary">
+                    <i class="bi bi-gear"></i> Modbus配置管理
+                </a>
+                
+            </div>
+        </div>
         
+
+
         <!-- 自动读取控制区域 -->
         <div class="auto-read-control">
             <div class="row align-items-center">
@@ -113,12 +132,24 @@
         <!-- 寄存器管理控制区域 -->
         <div class="register-controls">
             <div class="row align-items-center">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <h5 class="mb-0">寄存器管理</h5>
                 </div>
-                <div class="col-md-6 text-end">
-                    <button class="btn btn-success" onclick="addRegisterRow()">
+                <div class="col-md-8 text-end">
+                    <button class="btn btn-success me-2" onclick="addRegisterRow()">
                         <i class="bi bi-plus"></i> 添加寄存器
+                    </button>
+                    <button class="btn btn-primary me-2" onclick="saveConfig()">
+                        <i class="bi bi-save"></i> 保存配置
+                    </button>
+                    <button class="btn btn-info me-2" onclick="loadConfig()">
+                        <i class="bi bi-arrow-clockwise"></i> 加载配置
+                    </button>
+                    <button class="btn btn-warning me-2" onclick="clearConfig()">
+                        <i class="bi bi-trash"></i> 清空配置
+                    </button>
+                    <button class="btn btn-outline-info" onclick="refreshAllModbusConfigs()">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新Modbus配置
                     </button>
                 </div>
             </div>
@@ -141,40 +172,54 @@
             return `
                 <div class="register-item" id="register-${id}" data-address="${address}">
                     <div class="row">
-                        <div class="col-md-2">
-                            <div class="input-group">
-                                <span class="input-group-text">地址</span>
-                                <input type="number" class="form-control" id="address-${id}" value="${address}" placeholder="寄存器地址" onchange="updateRegisterAddress(${id})">
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="value-${id}" placeholder="输入值">
-                                <button class="btn btn-primary" onclick="writeRegister(${id})">写入</button>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="read-${id}" readonly>
-                                <button class="btn btn-success" onclick="readRegister(${id})">读取</button>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-outline-info btn-sm" onclick="toggleCondition(${id})">
-                                    <span id="condition-toggle-${id}">设置条件</span>
-                                </button>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="condition-enabled-${id}" onchange="toggleConditionEnabled(${id})">
-                                    <label class="form-check-label" for="condition-enabled-${id}">启用</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 text-end">
-                            <button class="btn btn-outline-danger btn-sm delete-btn" onclick="deleteRegisterRow(${id})">
-                                删除
-                            </button>
-                        </div>
+                         <div class="col-md-2">
+                             <div class="input-group">
+                                 <span class="input-group-text">Modbus配置</span>
+                                 <select class="form-select" id="modbus-config-${id}" onchange="updateModbusConfig(${id})">
+                                     <option value="">选择配置...</option>
+                                 </select>
+                             </div>
+                         </div>
+                         <div class="col-md-2">
+                             <div class="input-group">
+                                 <span class="input-group-text">地址</span>
+                                 <input type="number" class="form-control" id="address-${id}" value="${address}" placeholder="寄存器地址" onchange="updateRegisterAddress(${id})">
+                             </div>
+                         </div>
+                         <div class="col-md-2">
+                             <div class="input-group">
+                                 <input type="number" class="form-control" id="value-${id}" placeholder="输入值">
+                                 <button class="btn btn-primary" onclick="writeRegister(${id})">写入</button>
+                             </div>
+                         </div>
+                         <div class="col-md-2">
+                             <div class="input-group">
+                                 <input type="text" class="form-control" id="read-${id}" readonly>
+                                 <button class="btn btn-success" onclick="readRegister(${id})">读取</button>
+                             </div>
+                         </div>
+                         <div class="col-md-2">
+                             <div class="d-flex gap-2">
+                                 <button class="btn btn-outline-info btn-sm" onclick="toggleCondition(${id})">
+                                     <span id="condition-toggle-${id}">设置条件</span>
+                                 </button>
+                                 <div class="form-check form-switch">
+                                     <input class="form-check-input" type="checkbox" id="condition-enabled-${id}" onchange="toggleConditionEnabled(${id})">
+                                     <label class="form-check-label" for="condition-enabled-${id}">启用</label>
+                                 </div>
+                             </div>
+                         </div>
+                         <div class="col-md-1">
+                             <div class="input-group">
+                                 <span class="input-group-text">描述</span>
+                                 <input type="text" class="form-control" id="description-${id}" placeholder="寄存器描述" onchange="updateRegisterDescription(${id})">
+                             </div>
+                         </div>
+                         <div class="col-md-1 text-end">
+                             <button class="btn btn-outline-danger btn-sm delete-btn" onclick="deleteRegisterRow(${id})">
+                                 删除
+                             </button>
+                         </div>
                     </div>
                     
                     <!-- 条件设置面板 -->
@@ -197,57 +242,145 @@
             return `
                 <div class="condition-row" id="condition-${registerId}-${conditionId}">
                     <div class="row">
-                        <div class="col-md-2">
-                            <label class="form-label">触发条件</label>
-                            <select class="form-select" id="condition-operator-${registerId}-${conditionId}">
-                                <option value="equals">等于</option>
-                                <option value="not_equals">不等于</option>
-                                <option value="greater_than">大于</option>
-                                <option value="less_than">小于</option>
-                                <option value="greater_equal">大于等于</option>
-                                <option value="less_equal">小于等于</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">触发值</label>
-                            <input type="number" class="form-control" id="condition-value-${registerId}-${conditionId}" placeholder="触发值">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">写入地址</label>
-                            <input type="number" class="form-control" id="write-address-${registerId}-${conditionId}" placeholder="目标地址">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">写入值</label>
-                            <input type="number" class="form-control" id="write-value-${registerId}-${conditionId}" placeholder="写入值">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">条件描述</label>
-                            <div class="form-control-plaintext" id="condition-desc-${registerId}-${conditionId}">
-                                当寄存器值 等于 - 时，向地址 - 写入值 -
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">操作</label>
-                            <button class="btn btn-outline-danger btn-sm delete-btn" onclick="deleteConditionRow(${registerId}, ${conditionId})">
-                                删除条件
-                            </button>
-                        </div>
+                                                 <div class="col-md-1">
+                             <label class="form-label">触发条件</label>
+                             <select class="form-select" id="condition-operator-${registerId}-${conditionId}">
+                                 <option value="equals">等于</option>
+                                 <option value="not_equals">不等于</option>
+                                 <option value="greater_than">大于</option>
+                                 <option value="less_than">小于</option>
+                                 <option value="greater_equal">大于等于</option>
+                                 <option value="less_equal">小于等于</option>
+                             </select>
+                         </div>
+                         <div class="col-md-1">
+                             <label class="form-label">触发值</label>
+                             <input type="number" class="form-control" id="condition-value-${registerId}-${conditionId}" placeholder="触发值">
+                         </div>
+                         <div class="col-md-3">
+                             <label class="form-label">Modbus配置</label>
+                             <select class="form-select" id="condition-modbus-config-${registerId}-${conditionId}" onchange="updateConditionModbusConfig(${registerId}, ${conditionId})">
+                                 <option value="">选择配置...</option>
+                             </select>
+                         </div>
+                         <div class="col-md-1">
+                             <label class="form-label">写入地址</label>
+                             <input type="number" class="form-control" id="write-address-${registerId}-${conditionId}" placeholder="目标地址">
+                         </div>
+                         <div class="col-md-1">
+                             <label class="form-label">写入值</label>
+                             <input type="number" class="form-control" id="write-value-${registerId}-${conditionId}" placeholder="写入值">
+                         </div>
+                                                 <div class="col-md-3">
+                             <label class="form-label">描述</label>
+                             <input type="text" class="form-control" id="condition-description-${registerId}-${conditionId}" placeholder="条件描述" onchange="updateConditionDescription(${registerId}, ${conditionId})">
+                         </div>
+                         <div class="col-md-1">
+                             <label class="form-label">操作</label>
+                             <button class="btn btn-outline-danger btn-sm delete-btn" onclick="deleteConditionRow(${registerId}, ${conditionId})">
+                                 删除条件
+                             </button>
+                         </div>
                     </div>
                 </div>
             `;
         }
 
         function initRegisters() {
+            // 首先尝试加载已保存的配置
+            loadConfigOnInit();
+        }
+        
+        // 页面初始化时加载配置
+        function loadConfigOnInit() {
+            fetch('/api/config/load')
+                .then(response => response.json())
+                .then(configs => {
+                    if (configs && configs.length > 0) {
+                        // 有保存的配置，加载它们
+                        loadConfigsToUI(configs);
+                        console.log('页面刷新后自动加载配置成功');
+                    } else {
+                        // 没有保存的配置，使用默认配置
+                        createDefaultRegister();
+                        console.log('没有找到保存的配置，使用默认配置');
+                    }
+                    
+                    // 无论是否有配置，都加载自动读取状态
+                    loadAutoReadStatus();
+                })
+                .catch(error => {
+                    console.error('自动加载配置失败，使用默认配置：', error);
+                    // 加载失败时使用默认配置
+                    createDefaultRegister();
+                    // 即使配置加载失败，也尝试加载自动读取状态
+                    loadAutoReadStatus();
+                });
+        }
+        
+        // 将配置加载到UI界面
+        function loadConfigsToUI(configs) {
+            // 清空现有内容
+            const registersDiv = document.getElementById('registers');
+            registersDiv.innerHTML = '';
+            
+            // 重置计数器
+            registerCounter = 0;
+            conditionCounter = 0;
+            conditions = {};
+            
+            // 加载每个配置
+            configs.forEach(config => {
+                const registerId = addRegisterRowWithConfig(config);
+                
+                                 // 设置寄存器地址和启用状态
+                 document.getElementById(`address-${registerId}`).value = config.registerAddress;
+                 document.getElementById(`register-${registerId}`).setAttribute('data-address', config.registerAddress);
+                 
+                 // 设置寄存器描述
+                 if (config.description) {
+                     document.getElementById(`description-${registerId}`).value = config.description;
+                     conditions[registerId].description = config.description;
+                 }
+                 
+                 if (config.isEnabled) {
+                     document.getElementById(`condition-enabled-${registerId}`).checked = true;
+                     toggleConditionEnabled(registerId);
+                 }
+                
+                // 加载Modbus配置选项并设置选中的值
+                loadModbusConfigOptionsAndSetValue(registerId, config.modbusConfigId);
+                
+                // 加载条件配置
+                if (config.conditions && config.conditions.length > 0) {
+                    // 清空默认条件
+                    const container = document.getElementById(`conditions-container-${registerId}`);
+                    container.innerHTML = '';
+                    
+                    config.conditions.forEach(condition => {
+                        const conditionId = addConditionRowWithConfig(registerId, condition);
+                    });
+                }
+            });
+        }
+        
+        // 创建默认寄存器（当没有保存的配置时）
+        function createDefaultRegister() {
             const registersDiv = document.getElementById('registers');
             // 默认添加一行
-            registersDiv.innerHTML = createRegisterItem('0');
-            conditions[0] = {
-                enabled: false,
-                conditions: []
-            };
+            registersDiv.innerHTML = createRegisterItem('');
+                         conditions[0] = {
+                 enabled: false,
+                 conditions: [],
+                 modbusConfigId: null,
+                 description: ''
+             };
             
             // 为第一个寄存器添加一个默认条件
             addConditionRow(0);
+            
+            // 加载Modbus配置选项
+            loadModbusConfigOptions(0);
         }
 
         function addRegisterRow() {
@@ -256,13 +389,18 @@
             registersDiv.insertAdjacentHTML('beforeend', newRow);
             
             const newId = registerCounter - 1;
-            conditions[newId] = {
-                enabled: false,
-                conditions: []
-            };
+                         conditions[newId] = {
+                 enabled: false,
+                 conditions: [],
+                 modbusConfigId: null,
+                 description: ''
+             };
             
             // 为新寄存器添加一个默认条件
             addConditionRow(newId);
+            
+            // 加载Modbus配置选项
+            loadModbusConfigOptions(newId);
         }
 
         function deleteRegisterRow(id) {
@@ -288,12 +426,17 @@
             if (!conditions[registerId].conditions) {
                 conditions[registerId].conditions = {};
             }
-            conditions[registerId].conditions[conditionId] = {
-                operator: 'equals',
-                triggerValue: null,
-                writeAddress: null,
-                writeValue: null
-            };
+                         conditions[registerId].conditions[conditionId] = {
+                 operator: 'equals',
+                 triggerValue: null,
+                 writeAddress: null,
+                 writeValue: null,
+                 modbusConfigId: null,
+                 description: ''
+             };
+            
+            // 加载Modbus配置选项
+            loadConditionModbusConfigOptions(registerId, conditionId);
             
             // 绑定事件监听器
             bindConditionEvents(registerId, conditionId);
@@ -326,6 +469,14 @@
                 });
             }
         }
+        
+        function updateRegisterDescription(id) {
+            const description = document.getElementById(`description-${id}`).value;
+            if (!conditions[id]) {
+                conditions[id] = {};
+            }
+            conditions[id].description = description;
+        }
 
         function getRegisterAddress(id) {
             return document.getElementById(`address-${id}`).value;
@@ -338,7 +489,10 @@
                 return;
             }
 
-            fetch(`/api/modbus/read/${address}`)
+            const configId = getRegisterModbusConfig(id);
+            if (!configId) return;
+
+            fetch(`/api/modbus/read/${address}?configId=${configId}`)
                 .then(response => response.json())
                 .then(value => {
                     document.getElementById(`read-${id}`).value = value;
@@ -363,7 +517,10 @@
                 return;
             }
 
-            fetch(`/api/modbus/write/${address}?value=${value}`, {
+            const configId = getRegisterModbusConfig(id);
+            if (!configId) return;
+
+            fetch(`/api/modbus/write/${address}?value=${value}&configId=${configId}`, {
                 method: 'POST'
             })
             .then(() => {
@@ -392,6 +549,9 @@
             isAutoReading = true;
             document.getElementById('autoReadStatus').textContent = '开启';
             document.getElementById('autoReadSwitch').checked = true;
+            
+            // 保存自动读取状态到数据库
+            saveAutoReadStatus(true);
         }
 
         function stopAutoRead() {
@@ -402,6 +562,9 @@
             isAutoReading = false;
             document.getElementById('autoReadStatus').textContent = '关闭';
             document.getElementById('autoReadSwitch').checked = false;
+            
+            // 保存自动读取状态到数据库
+            saveAutoReadStatus(false);
         }
 
         function toggleAutoRead() {
@@ -410,6 +573,54 @@
             } else {
                 startAutoRead();
             }
+        }
+        
+        // 保存自动读取状态到数据库
+        function saveAutoReadStatus(enabled) {
+            fetch('/api/settings/auto-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `enabled=${enabled}`
+            })
+            .then(response => response.text())
+            .then(result => {
+                console.log('自动读取状态保存成功:', result);
+            })
+            .catch(error => {
+                console.error('保存自动读取状态失败：', error);
+            });
+        }
+        
+        // 从数据库加载自动读取状态
+        function loadAutoReadStatus() {
+            fetch('/api/settings/auto-read')
+                .then(response => response.json())
+                .then(enabled => {
+                    console.log('从数据库加载自动读取状态:', enabled);
+                    if (enabled) {
+                        // 不调用saveAutoReadStatus，避免重复保存
+                        if (autoReadInterval) {
+                            clearInterval(autoReadInterval);
+                        }
+                        autoReadInterval = setInterval(readAllRegisters, 1000);
+                        isAutoReading = true;
+                        document.getElementById('autoReadStatus').textContent = '开启';
+                        document.getElementById('autoReadSwitch').checked = true;
+                    } else {
+                        isAutoReading = false;
+                        document.getElementById('autoReadStatus').textContent = '关闭';
+                        document.getElementById('autoReadSwitch').checked = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('加载自动读取状态失败：', error);
+                    // 失败时使用默认状态（关闭）
+                    isAutoReading = false;
+                    document.getElementById('autoReadStatus').textContent = '关闭';
+                    document.getElementById('autoReadSwitch').checked = false;
+                });
         }
 
         function toggleCondition(id) {
@@ -444,6 +655,8 @@
             const triggerValue = document.getElementById(`condition-value-${registerId}-${conditionId}`).value;
             const writeAddress = document.getElementById(`write-address-${registerId}-${conditionId}`).value;
             const writeValue = document.getElementById(`write-value-${registerId}-${conditionId}`).value;
+            const modbusConfigId = document.getElementById(`condition-modbus-config-${registerId}-${conditionId}`).value;
+            const description = document.getElementById(`condition-description-${registerId}-${conditionId}`).value;
 
             const operatorText = {
                 'equals': '等于',
@@ -454,8 +667,9 @@
                 'less_equal': '小于等于'
             };
 
-            const desc = `当寄存器${address || '-'}的值 ${operatorText[operator] || '等于'} ${triggerValue || '-'} 时，向地址 ${writeAddress || '-'} 写入值 ${writeValue || '-'}`;
-            document.getElementById(`condition-desc-${registerId}-${conditionId}`).textContent = desc;
+            // 条件描述列已隐藏，不再需要更新
+            // const desc = `当寄存器${address || '-'}的值 ${operatorText[operator] || '等于'} ${triggerValue || '-'} 时，向地址 ${writeAddress || '-'} 写入值 ${writeValue || '-'}`;
+            // document.getElementById(`condition-desc-${registerId}-${conditionId}`).textContent = desc;
 
             // 更新条件对象
             if (!conditions[registerId].conditions) {
@@ -465,7 +679,9 @@
                 operator: operator,
                 triggerValue: triggerValue ? parseInt(triggerValue) : null,
                 writeAddress: writeAddress ? parseInt(writeAddress) : null,
-                writeValue: writeValue ? parseInt(writeValue) : null
+                writeValue: writeValue ? parseInt(writeValue) : null,
+                modbusConfigId: modbusConfigId ? parseInt(modbusConfigId) : null,
+                description: description
             };
         }
 
@@ -514,13 +730,30 @@
 
                 if (shouldExecute) {
                     console.log(`条件触发：寄存器${address}的值${currentVal}满足条件${conditionId}，向地址${condition.writeAddress}写入值${condition.writeValue}`);
-                    executeConditionalWrite(condition.writeAddress, condition.writeValue);
+                    executeConditionalWrite(condition.writeAddress, condition.writeValue, condition.modbusConfigId);
                 }
             });
         }
 
-        function executeConditionalWrite(address, value) {
-            fetch(`/api/modbus/write/${address}?value=${value}`, {
+        function executeConditionalWrite(address, value, conditionModbusConfigId) {
+            // 使用条件自己的Modbus配置
+            let targetConfigId = conditionModbusConfigId;
+            
+            // 如果条件没有配置Modbus，则查找目标地址对应的寄存器配置
+            if (!targetConfigId) {
+                Object.keys(conditions).forEach(id => {
+                    if (getRegisterAddress(parseInt(id)) == address) {
+                        targetConfigId = conditions[parseInt(id)].modbusConfigId;
+                    }
+                });
+            }
+            
+            if (!targetConfigId) {
+                console.error(`未找到地址${address}对应的Modbus配置`);
+                return;
+            }
+
+            fetch(`/api/modbus/write/${address}?value=${value}&configId=${targetConfigId}`, {
                 method: 'POST'
             })
             .then(() => {
@@ -533,7 +766,7 @@
                 });
             })
             .catch(error => {
-                console.error(`条件写入失败：地址${address}，值${value}，错误：`, error);
+                console.error(`条件写入失败：地址${address}，值${address}，错误：`, error);
             });
         }
 
@@ -542,8 +775,386 @@
             document.getElementById(`condition-value-${registerId}-${conditionId}`).addEventListener('input', () => updateConditionDescription(registerId, conditionId));
             document.getElementById(`write-address-${registerId}-${conditionId}`).addEventListener('input', () => updateConditionDescription(registerId, conditionId));
             document.getElementById(`write-value-${registerId}-${conditionId}`).addEventListener('input', () => updateConditionDescription(registerId, conditionId));
+            document.getElementById(`condition-modbus-config-${registerId}-${conditionId}`).addEventListener('change', () => updateConditionDescription(registerId, conditionId));
+            document.getElementById(`condition-description-${registerId}-${conditionId}`).addEventListener('input', () => updateConditionDescription(registerId, conditionId));
         }
 
+        // 配置管理函数
+        function saveConfig() {
+            const configs = [];
+            
+            // 收集所有寄存器配置
+            Object.keys(conditions).forEach(id => {
+                const address = getRegisterAddress(parseInt(id));
+                if (address) {
+                                         const config = {
+                         registerAddress: parseInt(address),
+                         isEnabled: conditions[id].enabled,
+                         modbusConfigId: conditions[id].modbusConfigId,
+                         description: conditions[id].description || '',
+                         conditions: []
+                     };
+                    
+                    // 收集条件配置
+                    if (conditions[id].conditions) {
+                        Object.keys(conditions[id].conditions).forEach(conditionId => {
+                            const condition = conditions[id].conditions[conditionId];
+                            if (condition.triggerValue !== null && condition.writeAddress !== null && condition.writeValue !== null) {
+                                                                 config.conditions.push({
+                                     operator: condition.operator,
+                                     triggerValue: condition.triggerValue,
+                                     writeAddress: condition.writeAddress,
+                                     writeValue: condition.writeValue,
+                                     modbusConfigId: condition.modbusConfigId,
+                                     description: condition.description || ''
+                                 });
+                            }
+                        });
+                    }
+                    
+                    configs.push(config);
+                }
+            });
+            
+            if (configs.length === 0) {
+                alert('没有可保存的配置！');
+                return;
+            }
+            
+            // 发送保存请求
+            fetch('/api/config/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(configs)
+            })
+            .then(response => response.text())
+            .then(result => {
+                alert('配置保存成功！');
+                console.log('保存结果：', result);
+            })
+            .catch(error => {
+                alert('配置保存失败：' + error);
+                console.error('保存错误：', error);
+            });
+        }
+        
+        function loadConfig() {
+            fetch('/api/config/load')
+                .then(response => response.json())
+                .then(configs => {
+                    if (configs && configs.length > 0) {
+                        // 清空现有配置
+                        clearAllRegisters();
+                        
+                        // 使用统一的加载函数
+                        loadConfigsToUI(configs);
+                        
+                        // 重新加载自动读取状态
+                        loadAutoReadStatus();
+                        
+                        alert('配置加载成功！');
+                    } else {
+                        alert('没有找到保存的配置！');
+                    }
+                })
+                .catch(error => {
+                    alert('配置加载失败：' + error);
+                    console.error('加载错误：', error);
+                });
+        }
+        
+        function clearConfig() {
+            if (confirm('确定要清空所有配置吗？此操作不可恢复！')) {
+                console.log('开始清空配置...');
+                fetch('/api/config/clear', {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    console.log('清空API响应状态:', response.status);
+                    return response.text();
+                })
+                .then(result => {
+                    console.log('清空结果：', result);
+                    alert('配置清空成功！页面将自动刷新以重置所有状态。');
+                    
+                    // 尝试多种刷新方式
+                    setTimeout(() => {
+                        console.log('准备刷新页面...');
+                        try {
+                            // 方式1: 使用location.reload()
+                            window.location.reload();
+                        } catch (e) {
+                            console.error('方式1失败:', e);
+                            try {
+                                // 方式2: 使用location.href
+                                window.location.href = window.location.href;
+                            } catch (e2) {
+                                console.error('方式2失败:', e2);
+                                try {
+                                    // 方式3: 使用location.replace
+                                    window.location.replace(window.location.href);
+                                } catch (e3) {
+                                    console.error('方式3失败:', e3);
+                                    // 方式4: 强制刷新
+                                    document.location.reload(true);
+                                }
+                            }
+                        }
+                    }, 1000);
+                    
+                    // 备用刷新方法，如果1秒后还没刷新，强制刷新
+                    setTimeout(() => {
+                        console.log('备用刷新方法启动...');
+                        if (document.readyState === 'complete') {
+                            console.log('强制刷新页面...');
+                            document.location.reload(true);
+                        }
+                    }, 2000);
+                })
+                .catch(error => {
+                    console.error('清空配置失败：', error);
+                    alert('配置清空失败：' + error);
+                });
+            }
+        }
+        
+        function clearAllRegisters() {
+            const registersDiv = document.getElementById('registers');
+            registersDiv.innerHTML = '';
+            conditions = {};
+            registerCounter = 0;
+            conditionCounter = 0;
+        }
+        
+        function addRegisterRowWithConfig(config) {
+            const registersDiv = document.getElementById('registers');
+            const newRow = createRegisterItem(config.registerAddress || '');
+            registersDiv.insertAdjacentHTML('beforeend', newRow);
+            
+            const newId = registerCounter - 1;
+                         conditions[newId] = {
+                 enabled: config.isEnabled || false,
+                 conditions: {},
+                 modbusConfigId: config.modbusConfigId || null,
+                 description: config.description || ''
+             };
+            
+            return newId;
+        }
+        
+        function addConditionRowWithConfig(registerId, condition) {
+            const conditionId = conditionCounter++;
+            const container = document.getElementById(`conditions-container-${registerId}`);
+            const newCondition = createConditionRow(registerId, conditionId);
+            container.insertAdjacentHTML('beforeend', newCondition);
+            
+                         // 设置条件值
+             document.getElementById(`condition-operator-${registerId}-${conditionId}`).value = condition.operator;
+             document.getElementById(`condition-value-${registerId}-${conditionId}`).value = condition.triggerValue;
+             document.getElementById(`write-address-${registerId}-${conditionId}`).value = condition.writeAddress;
+             document.getElementById(`write-value-${registerId}-${conditionId}`).value = condition.writeValue;
+             
+             // 设置条件描述
+             if (condition.description) {
+                 document.getElementById(`condition-description-${registerId}-${conditionId}`).value = condition.description;
+             }
+            
+            // 初始化条件对象
+            if (!conditions[registerId].conditions) {
+                conditions[registerId].conditions = {};
+            }
+                         conditions[registerId].conditions[conditionId] = {
+                 operator: condition.operator,
+                 triggerValue: condition.triggerValue,
+                 writeAddress: condition.writeAddress,
+                 writeValue: condition.writeValue,
+                 modbusConfigId: condition.modbusConfigId,
+                 description: condition.description || ''
+             };
+            
+            // 加载Modbus配置选项并设置选中的值
+            loadConditionModbusConfigOptionsAndSetValue(registerId, conditionId, condition.modbusConfigId);
+            
+            // 绑定事件监听器
+            bindConditionEvents(registerId, conditionId);
+            updateConditionDescription(registerId, conditionId);
+            
+            return conditionId;
+        }
+        
+        // 加载Modbus TCP配置选项到指定寄存器的下拉框
+        function loadModbusConfigOptions(registerId) {
+            fetch('/api/modbus-config/list/enabled')
+                .then(response => response.json())
+                .then(configs => {
+                    const select = document.getElementById(`modbus-config-${registerId}`);
+                    // 保留第一个选项
+                    select.innerHTML = '<option value="">选择配置...</option>';
+                    
+                    configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        option.textContent = `${config.configName} (${config.host}:${config.port})`;
+                        if (config.isDefault) {
+                            option.textContent += ' [默认]';
+                            option.selected = true;
+                            // 设置默认配置ID
+                            conditions[registerId].modbusConfigId = config.id;
+                        }
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载Modbus TCP配置失败：', error);
+                });
+        }
+        
+        // 加载Modbus TCP配置选项并设置选中的值
+        function loadModbusConfigOptionsAndSetValue(registerId, selectedConfigId) {
+            fetch('/api/modbus-config/list/enabled')
+                .then(response => response.json())
+                .then(configs => {
+                    const select = document.getElementById(`modbus-config-${registerId}`);
+                    // 保留第一个选项
+                    select.innerHTML = '<option value="">选择配置...</option>';
+                    
+                    configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        option.textContent = `${config.configName} (${config.host}:${config.port})`;
+                        if (config.isDefault) {
+                            option.textContent += ' [默认]';
+                        }
+                        select.appendChild(option);
+                    });
+                    
+                    // 设置选中的值
+                    if (selectedConfigId) {
+                        select.value = selectedConfigId;
+                        conditions[registerId].modbusConfigId = selectedConfigId;
+                    } else if (configs.length > 0) {
+                        // 如果没有指定配置ID，但有默认配置，则选择默认配置
+                        const defaultConfig = configs.find(config => config.isDefault);
+                        if (defaultConfig) {
+                            select.value = defaultConfig.id;
+                            conditions[registerId].modbusConfigId = defaultConfig.id;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('加载Modbus TCP配置失败：', error);
+                });
+        }
+        
+        // 更新寄存器的Modbus配置
+        function updateModbusConfig(registerId) {
+            const select = document.getElementById(`modbus-config-${registerId}`);
+            const configId = select.value;
+            conditions[registerId].modbusConfigId = configId;
+        }
+        
+        // 获取指定寄存器的Modbus TCP配置
+        function getRegisterModbusConfig(registerId) {
+            const configId = conditions[registerId].modbusConfigId;
+            if (!configId) {
+                // 先停止自动读取，避免循环弹出提示
+                if (isAutoReading) {
+                    stopAutoRead();
+                    console.log(`寄存器${registerId}未选择Modbus TCP配置，已停止自动读取`);
+                }
+                alert(`寄存器${registerId}未选择Modbus TCP配置！\n已自动停止自动读取功能。`);
+                return null;
+            }
+            return configId;
+        }
+        
+        // 刷新所有寄存器的Modbus配置选项
+        function refreshAllModbusConfigs() {
+            Object.keys(conditions).forEach(id => {
+                loadModbusConfigOptions(parseInt(id));
+                
+                // 刷新该寄存器的所有条件配置
+                if (conditions[id].conditions) {
+                    Object.keys(conditions[id].conditions).forEach(conditionId => {
+                        loadConditionModbusConfigOptions(parseInt(id), parseInt(conditionId));
+                    });
+                }
+            });
+            alert('所有Modbus配置已刷新！');
+        }
+        
+        // 加载条件的Modbus TCP配置选项
+        function loadConditionModbusConfigOptions(registerId, conditionId) {
+            fetch('/api/modbus-config/list/enabled')
+                .then(response => response.json())
+                .then(configs => {
+                    const select = document.getElementById(`condition-modbus-config-${registerId}-${conditionId}`);
+                    // 保留第一个选项
+                    select.innerHTML = '<option value="">选择配置...</option>';
+                    
+                    configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        option.textContent = `${config.configName} (${config.host}:${config.port})`;
+                        if (config.isDefault) {
+                            option.textContent += ' [默认]';
+                        }
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载条件Modbus TCP配置失败：', error);
+                });
+        }
+        
+        // 加载条件的Modbus TCP配置选项并设置选中的值
+        function loadConditionModbusConfigOptionsAndSetValue(registerId, conditionId, selectedConfigId) {
+            fetch('/api/modbus-config/list/enabled')
+                .then(response => response.json())
+                .then(configs => {
+                    const select = document.getElementById(`condition-modbus-config-${registerId}-${conditionId}`);
+                    // 保留第一个选项
+                    select.innerHTML = '<option value="">选择配置...</option>';
+                    
+                    configs.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.id;
+                        option.textContent = `${config.configName} (${config.host}:${config.port})`;
+                        if (config.isDefault) {
+                            option.textContent += ' [默认]';
+                        }
+                        select.appendChild(option);
+                    });
+                    
+                    // 设置选中的值
+                    if (selectedConfigId) {
+                        select.value = selectedConfigId;
+                        conditions[registerId].conditions[conditionId].modbusConfigId = selectedConfigId;
+                    } else if (configs.length > 0) {
+                        // 如果没有指定配置ID，但有默认配置，则选择默认配置
+                        const defaultConfig = configs.find(config => config.isDefault);
+                        if (defaultConfig) {
+                            select.value = defaultConfig.id;
+                            conditions[registerId].conditions[conditionId].modbusConfigId = defaultConfig.id;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('加载条件Modbus TCP配置失败：', error);
+                });
+        }
+        
+        // 更新条件的Modbus配置
+        function updateConditionModbusConfig(registerId, conditionId) {
+            const select = document.getElementById(`condition-modbus-config-${registerId}-${conditionId}`);
+            const configId = select.value;
+            if (conditions[registerId] && conditions[registerId].conditions && conditions[registerId].conditions[conditionId]) {
+                conditions[registerId].conditions[conditionId].modbusConfigId = configId;
+            }
+        }
+        
         // 初始化页面
         initRegisters();
 

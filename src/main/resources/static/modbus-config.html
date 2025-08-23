@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Modbus TCP 配置管理</title>
+    <link href="./static/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .config-item { margin-bottom: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff; }
+        .config-item.default { border-color: #28a745; background-color: #f8fff9; }
+        .config-item.disabled { opacity: 0.6; background-color: #f8f9fa; }
+        .config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .config-title { font-weight: bold; color: #495057; }
+        .config-controls { display: flex; gap: 5px; }
+        .default-badge { background-color: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+        .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+        .status-enabled { background-color: #28a745; color: white; }
+        .status-disabled { background-color: #6c757d; color: white; }
+        .form-row { margin-bottom: 15px; }
+        .form-label { margin-bottom: 5px; font-weight: 500; }
+        .modal-lg { max-width: 800px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Modbus TCP 配置管理</h2>
+        <button class="btn btn-success" onclick="showCreateModal()">新增配置</button>
+        <button class="btn btn-info" onclick="refreshConfigs()">刷新列表</button>
+        <a href="./index.html" class="btn btn-outline-primary">返回主界面</a>
+        <div id="configList"></div>
+    </div>
+
+    <!-- 新增/编辑配置模态框 -->
+    <div class="modal fade" id="configModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">新增 Modbus TCP 配置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="configForm">
+                        <input type="hidden" id="configId">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-row">
+                                    <label class="form-label">配置名称 *</label>
+                                    <input type="text" class="form-control" id="configName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-row">
+                                    <label class="form-label">设备IP地址 *</label>
+                                    <input type="text" class="form-control" id="host" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label class="form-label">端口号 *</label>
+                                    <input type="number" class="form-control" id="port" value="502" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label class="form-label">从站地址 *</label>
+                                    <input type="number" class="form-control" id="slaveId" value="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label class="form-label">超时时间(秒)</label>
+                                    <input type="number" class="form-control" id="timeout" value="5">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-row">
+                                    <label class="form-label">Modbus库 *</label>
+                                    <select class="form-select" id="dependency" required>
+                                        <option value="digitalpetri">DigitalPetri</option>
+                                        <option value="jlibmodbus">JLibModbus</option>
+                                        <option value="modbus4j">Modbus4j</option>
+                                        <option value="jamod">Jamod</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-row">
+                                    <label class="form-label">配置描述</label>
+                                    <input type="text" class="form-control" id="description" placeholder="可选">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="isDefault">
+                                    <label class="form-check-label" for="isDefault">
+                                        设为默认配置
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="isEnabled" checked>
+                                    <label class="form-check-label" for="isEnabled">
+                                        启用配置
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveConfig()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="./static/jquery.min.js"></script>
+    <script src="./static/bootstrap.bundle.min.js"></script>
+    <script>
+        let configModal;
+        let isEditMode = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            configModal = new bootstrap.Modal(document.getElementById('configModal'));
+            loadConfigs();
+        });
+        
+        function loadConfigs() {
+            fetch('/api/modbus-config/list')
+                .then(response => response.json())
+                .then(configs => {
+                    displayConfigs(configs);
+                })
+                .catch(error => {
+                    console.error('加载配置失败：', error);
+                    alert('加载配置失败：' + error);
+                });
+        }
+        
+        function displayConfigs(configs) {
+            const configList = document.getElementById('configList');
+            
+            if (configs.length === 0) {
+                configList.innerHTML = '<div class="alert alert-info">暂无配置，请点击"新增配置"按钮创建第一个配置。</div>';
+                return;
+            }
+            
+            let html = '';
+            configs.forEach(config => {
+                html += createConfigItem(config);
+            });
+            configList.innerHTML = html;
+        }
+        
+        function createConfigItem(config) {
+            const defaultBadge = config.isDefault ? '<span class="default-badge">默认</span>' : '';
+            const statusBadge = config.isEnabled ? 
+                '<span class="status-badge status-enabled">启用</span>' : 
+                '<span class="status-badge status-disabled">禁用</span>';
+            
+            return `
+                <div class="config-item ${config.isDefault ? 'default' : ''} ${!config.isEnabled ? 'disabled' : ''}" id="config-${config.id}">
+                    <div class="config-header">
+                        <div class="config-title">
+                            ${config.configName}${defaultBadge}${statusBadge}
+                        </div>
+                        <div class="config-controls">
+                            <button class="btn btn-outline-primary btn-sm" onclick="editConfig(${config.id})">编辑</button>
+                            <button class="btn btn-outline-success btn-sm" onclick="testConnection(${config.id})">测试连接</button>
+                            ${!config.isDefault ? `<button class="btn btn-outline-warning btn-sm" onclick="setDefaultConfig(${config.id})">设为默认</button>` : ''}
+                            <button class="btn btn-outline-info btn-sm" onclick="toggleConfigStatus(${config.id}, ${!config.isEnabled})">
+                                ${config.isEnabled ? '禁用' : '启用'}
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteConfig(${config.id})">删除</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3"><strong>IP地址：</strong>${config.host}</div>
+                        <div class="col-md-2"><strong>端口：</strong>${config.port}</div>
+                        <div class="col-md-2"><strong>从站：</strong>${config.slaveId}</div>
+                        <div class="col-md-2"><strong>超时：</strong>${config.timeout || 5}s</div>
+                        <div class="col-md-3"><strong>库：</strong>${getDependencyDisplayName(config.dependency)}</div>
+                    </div>
+                    ${config.description ? `<div class="mt-2"><strong>描述：</strong>${config.description}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function getDependencyDisplayName(dependency) {
+            const names = {
+                'digitalpetri': 'DigitalPetri',
+                'jlibmodbus': 'JLibModbus',
+                'modbus4j': 'Modbus4j',
+                'jamod': 'Jamod'
+            };
+            return names[dependency] || dependency;
+        }
+        
+        function showCreateModal() {
+            isEditMode = false;
+            document.getElementById('modalTitle').textContent = '新增 Modbus TCP 配置';
+            document.getElementById('configForm').reset();
+            document.getElementById('configId').value = '';
+            document.getElementById('port').value = '502';
+            document.getElementById('slaveId').value = '1';
+            document.getElementById('timeout').value = '5';
+            document.getElementById('dependency').value = 'digitalpetri';
+            document.getElementById('isDefault').checked = false;
+            document.getElementById('isEnabled').checked = true;
+            configModal.show();
+        }
+        
+        function editConfig(id) {
+            isEditMode = true;
+            document.getElementById('modalTitle').textContent = '编辑 Modbus TCP 配置';
+            
+            fetch(`/api/modbus-config/${id}`)
+                .then(response => response.json())
+                .then(config => {
+                    document.getElementById('configId').value = config.id;
+                    document.getElementById('configName').value = config.configName;
+                    document.getElementById('host').value = config.host;
+                    document.getElementById('port').value = config.port;
+                    document.getElementById('slaveId').value = config.slaveId;
+                    document.getElementById('timeout').value = config.timeout || 5;
+                    document.getElementById('dependency').value = config.dependency;
+                    document.getElementById('isDefault').checked = config.isDefault;
+                    document.getElementById('isEnabled').checked = config.isEnabled;
+                    document.getElementById('description').value = config.description || '';
+                    configModal.show();
+                })
+                .catch(error => {
+                    console.error('加载配置详情失败：', error);
+                    alert('加载配置详情失败：' + error);
+                });
+        }
+        
+        function saveConfig() {
+            const formData = {
+                configName: document.getElementById('configName').value,
+                host: document.getElementById('host').value,
+                port: parseInt(document.getElementById('port').value),
+                slaveId: parseInt(document.getElementById('slaveId').value),
+                timeout: parseInt(document.getElementById('timeout').value),
+                dependency: document.getElementById('dependency').value,
+                isDefault: document.getElementById('isDefault').checked,
+                isEnabled: document.getElementById('isEnabled').checked,
+                description: document.getElementById('description').value
+            };
+            
+            if (isEditMode) {
+                const id = document.getElementById('configId').value;
+                updateConfig(id, formData);
+            } else {
+                createConfig(formData);
+            }
+        }
+        
+        function createConfig(formData) {
+            fetch('/api/modbus-config/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.id) {
+                    alert('配置创建成功！');
+                    configModal.hide();
+                    loadConfigs();
+                } else {
+                    alert('配置创建失败：' + result);
+                }
+            })
+            .catch(error => {
+                alert('配置创建失败：' + error);
+            });
+        }
+        
+        function updateConfig(id, formData) {
+            fetch(`/api/modbus-config/update/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.id) {
+                    alert('配置更新成功！');
+                    configModal.hide();
+                    loadConfigs();
+                } else {
+                    alert('配置更新失败：' + result);
+                }
+            })
+            .catch(error => {
+                alert('配置更新失败：' + error);
+            });
+        }
+        
+        function deleteConfig(id) {
+            if (confirm('确定要删除这个配置吗？此操作不可恢复！')) {
+                fetch(`/api/modbus-config/delete/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.text())
+                .then(result => {
+                    alert('配置删除成功！');
+                    loadConfigs();
+                })
+                .catch(error => {
+                    alert('配置删除失败：' + error);
+                });
+            }
+        }
+        
+        function setDefaultConfig(id) {
+            fetch(`/api/modbus-config/set-default/${id}`, {
+                method: 'POST'
+            })
+            .then(response => response.text())
+            .then(result => {
+                alert('默认配置设置成功！');
+                loadConfigs();
+            })
+            .catch(error => {
+                alert('设置默认配置失败：' + error);
+            });
+        }
+        
+        function toggleConfigStatus(id, enabled) {
+            fetch(`/api/modbus-config/toggle-status/${id}?enabled=${enabled}`, {
+                method: 'POST'
+            })
+            .then(response => response.text())
+            .then(result => {
+                alert('配置状态切换成功！');
+                loadConfigs();
+            })
+            .catch(error => {
+                alert('状态切换失败：' + error);
+            });
+        }
+        
+        function testConnection(id) {
+            fetch(`/api/modbus-config/${id}`)
+                .then(response => response.json())
+                .then(config => {
+                    fetch('/api/modbus-config/test-connection', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    })
+                    .then(response => response.text())
+                    .then(result => {
+                        alert('连接测试结果：' + result);
+                    })
+                    .catch(error => {
+                        alert('连接测试失败：' + error);
+                    });
+                })
+                .catch(error => {
+                    alert('获取配置信息失败：' + error);
+                });
+        }
+        
+        function refreshConfigs() {
+            loadConfigs();
+        }
+    </script>
+</body>
+</html>
