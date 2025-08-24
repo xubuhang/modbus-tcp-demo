@@ -87,13 +87,24 @@
         .add-condition-btn:hover {
             background-color: #218838;
         }
-        .modbus-config-select {
-            background-color: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #90caf9;
-        }
+                 .modbus-config-select {
+             background-color: #e3f2fd;
+             padding: 15px;
+             border-radius: 8px;
+             margin-bottom: 20px;
+             border: 1px solid #90caf9;
+         }
+         .register-header {
+             background-color: #f8f9fa;
+             padding: 15px;
+             border-radius: 8px;
+             border: 1px solid #dee2e6;
+             margin-bottom: 20px;
+         }
+         .register-header h6 {
+             margin: 0;
+             font-size: 14px;
+         }
     </style>
 </head>
 <body>
@@ -155,7 +166,34 @@
             </div>
         </div>
         
-        <div id="registers"></div>
+                 <!-- 寄存器表头 -->
+         <div class="register-header mb-3">
+             <div class="row">
+                 <div class="col-md-2">
+                     <h6 class="text-center fw-bold text-primary">Modbus配置</h6>
+                 </div>
+                 <div class="col-md-2">
+                     <h6 class="text-center fw-bold text-primary">地址</h6>
+                 </div>
+                 <div class="col-md-2">
+                     <h6 class="text-center fw-bold text-primary">写入值</h6>
+                 </div>
+                 <div class="col-md-2">
+                     <h6 class="text-center fw-bold text-primary">读取值</h6>
+                 </div>
+                 <div class="col-md-2">
+                     <h6 class="text-center fw-bold text-primary">条件控制</h6>
+                 </div>
+                 <div class="col-md-1">
+                     <h6 class="text-center fw-bold text-primary">描述</h6>
+                 </div>
+                 <div class="col-md-1">
+                     <h6 class="text-center fw-bold text-primary">操作</h6>
+                 </div>
+             </div>
+         </div>
+         
+         <div id="registers"></div>
     </div>
 
     <script src="./static/jquery.min.js"></script>
@@ -174,7 +212,6 @@
                     <div class="row">
                          <div class="col-md-2">
                              <div class="input-group">
-                                 <span class="input-group-text">Modbus配置</span>
                                  <select class="form-select" id="modbus-config-${id}" onchange="updateModbusConfig(${id})">
                                      <option value="">选择配置...</option>
                                  </select>
@@ -211,7 +248,6 @@
                          </div>
                          <div class="col-md-1">
                              <div class="input-group">
-                                 <span class="input-group-text">描述</span>
                                  <input type="text" class="form-control" id="description-${id}" placeholder="寄存器描述" onchange="updateRegisterDescription(${id})">
                              </div>
                          </div>
